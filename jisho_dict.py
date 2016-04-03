@@ -87,13 +87,16 @@ def data_path(path, filename):
     return pplib.ff.data_path(path, filename)
     
 def parse_audios(bs):
-    audios = bs.find('source')
-
     srcs = list()
+
+    if not bs: return srcs
+
+    audios = bs.find_all('source')
+
     for a in audios:
         src = a['src']
         if src:
-            srcs.append(srcs)
+            srcs.append(src)
     return srcs
 
 
@@ -129,14 +132,21 @@ def search(word):
 def query(word):
     url = 'http://jisho.org/word/%s' % word
     print url
-    code, content = pplib.uff.download(url)
-
-    if code != 200:
-        print 'download failed: %d' % code
-        return None
 
     path = data_path('raw', word)
-    pplib.ff.save(path, content)
+    content = pplib.ff.read(path)
+
+    if content:
+        print 'load %s' % path
+    else:
+        code, content = pplib.uff.download(url)
+
+        if code == 200:
+            print 'download succeed'
+            pplib.ff.save(path, content)
+        else:
+            print 'download failed: %d' % code
+            return None
 
     return extract_word_content(BS(content))
 
@@ -239,9 +249,7 @@ def extract_word_info(bs):
 
     # audio
     audio = bs.find('audio')
-    if audio:
-        sources = audio.find('source')
-        w.audios = [s['src'] for s in sources]
+    w.audios = parse_audios(audio)
 
     return w
 

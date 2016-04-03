@@ -152,12 +152,14 @@ def parse_category_content(category):
 
     return len(words)
 
-def enum_categories_with(handle, callback=None):
+def enum_categories_with(handle, filter_func=None, callback=None):
     categories = pplib.ff.read_json(category_list_filepath())
     for c in categories:
+        if filter_func and not filter_func(c): continue
+
         result = handle(c)
         if callback:
-            callback(result)
+            callback(c, result)
 
 def extract_words():
     enum_categories_with(extract_words_in_category)
@@ -207,22 +209,87 @@ def extract_words_in_category(category):
     f.close()
     return outlines
 
-def query_dict():
-    enum_categories_with(query_dict_for_category)
+query_statistics_count = 0
+def query_statistics():
+    global query_statistics_count
+    query_statistics_count += 1
+    print query_statistics_count
 
-def query_dict_for_category(category):
+    if query_statistics_count > 10:
+        import sys
+        sys.exit()
+
+def query_dict():
+    state_file = data_filepath('state', 'last_query_state')
+    states = pplib.ff.read_states(state_file)
+
+    def filter_func(c):
+        class local:
+            start = False
+
+        # not ever parsed
+        if not states:
+            return True
+
+        # mark start True only when we get to last_c
+        url = c['url']
+        if not local.start:
+            local.start = url == states[0]
+
+        return local.start
+
+    def callback(c, words):
+        url = c['url']
+        if states and url == states[0]:
+            words = filter_queried_words(states[1], words)
+
+        def word_callback(w, word):
+            """
+                w: word text
+                word: Word
+            """
+            if word:
+                print word
+            else:
+                print '%s not found' % w
+
+            pplib.ff.save_states(state_file, [c['url'], w])
+            query_statistics()
+
+        query_words(words, word_callback)
+
+    enum_categories_with(parse_words_for_category, filter_func, callback)
+
+
+def filter_queried_words(last_w, words):
+    result = list()
+    start = False
+    for w in words:
+        if start:
+            result.append(w)
+        else:
+            start = w == last_w
+    return result
+
+def query_words(words, callback):
+    for w in words:
+        print '-' * 80
+        word = jisho_dict.query(w)
+        callback(w, word)
+
+def parse_words_for_category(category):
     url = category['url']
     path = processed_cateogory_filepath(url, 'words')
     print path
+    words = list()
     for line in open(path):
         if 'mp3' in line:
             continue
         parts = line.split(', ')
         word = parts[0].strip()
         print 'word: %s, %s' % (word, line)
-        w = jisho_dict.query(word)
-        print w
-        print ''
+        words.append(word)
+    return words
 
 if __name__ == '__main__':
     #parse_category_list()
