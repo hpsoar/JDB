@@ -2,84 +2,7 @@
 
 import pplib
 from bs4 import BeautifulSoup as BS
-
-class Word(object):
-    def __init__(self, text='', furigana=None):
-        self.text = text
-
-        self.furigana = furigana
-
-        self.audios = list()
-
-        self.meanings = list()
-
-        self.tags = list()
-
-    def __unicode__(self):
-        parts = list()
-        parts.append('%s, %s' % (self.text, self.furigana))
-
-        if self.audios:
-            parts.append(str(self.audios))
-
-        if self.meanings:
-            parts.append('\nmeaning\n'.join([unicode(m) for m in self.meanings]))
-
-        if self.tags:
-            parts.append(str(self.tags))
-
-        return '\n'.join(parts)
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
-
-class WordMeaning(object):
-    def __init__(self):
-        self.tags = ''
-        self.meaning = ''
-        self.info = ''
-        self.sentences = list()
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
-
-    def __unicode__(self):
-        parts = list()
-        if self.tags:
-            parts.append(self.tags)
-
-        parts.append(self.meaning)
-
-        if self.info:
-            parts.append(self.info)
-
-        if self.sentences:
-            parts.append('\n'.join([unicode(s) for s in self.sentences]))
-
-        return '\n'.join(parts)
-
-class Sentence(object):
-    def __init__(self):
-        self.words = list()
-        self.translation = ''
-
-    def __unicode__(self):
-        parts = list()
-        for w in self.words:
-            parts.append(w.text)
-            if w.furigana:
-                parts.append('(%s)' % w.furigana)
-
-        #parts.append('。')
-        line = ''.join(parts)
-
-        if self.translation:
-            line = '\n'.join([line, self.translation])
-
-        return line
-
-    def __str__(self):
-        return unicode(self).encode('utf-8')
+from word import *
 
 def data_path(path, filename):
     import os
@@ -215,7 +138,7 @@ def extract_example_sentence(bs):
     for li in lis:
         furigana = li.find(class_='furigana')
         text = li.find(class_='unlinked')
-        word = Word(text.text.strip())
+        word = Kanji(text.text.strip())
         if furigana:
             word.furigana = furigana.text.strip()
         sentence.words.append(word)
@@ -225,20 +148,15 @@ def extract_example_sentence(bs):
     return sentence
 
 
-
 def extract_word_info(bs):
     w = Word()
 
     # word basic info
     word_part = bs.find(class_='concept_light-representation')
-    kanji = word_part.find(class_='kanji-2-up kanji')
+    furigana = word_part.find(class_='furigana')
     text = word_part.find(class_='text')
 
-    if text:
-        w.text = text.text.strip()
-    
-    if kanji:
-        w.furigana = kanji.text.strip()
+    w.words = extract_word_kanjis(furigana, text)
 
     # tags
     extra = bs.find(class_='concept_light-status')
@@ -254,6 +172,33 @@ def extract_word_info(bs):
     return w
 
 
+def extract_word_kanjis(furigana, text):
+    spans = text.find_all('span')
+    for s in spans: s.extract()
+    ss = [s.text.strip() for s in spans]
+    ss = ''.join(ss)
+    kanjis = list(text.text.strip())
+
+    furiganas = list()
+    if furigana:
+        furiganas =  furigana.find_all('span')
+        furiganas = [f.text for f in furiganas if f.text]
+
+    words = list()
+    if len(kanjis) != len(furiganas):
+        print 'error parsing word: %s%s' % (''.join(kanjis), ss)
+        print kanjis
+        print furiganas
+    else:
+        for i in range(len(kanjis)):
+            k = Kanji(kanjis[i], furiganas[i])
+            words.append(k)
+        if ss:
+            k = Kanji('', ss)
+            words.append(k)
+    return words
+
+
 def parse_raw_file(word):
     path = data_path('raw', word)
     content = pplib.ff.read(path)
@@ -261,10 +206,19 @@ def parse_raw_file(word):
 
 if __name__ == '__main__':
     word = '長い'
-    word = '数ヵ月'
+    #word = '発明'
+    #word = '数ヵ月'
     #search(word)
     #parse_raw_file(word)
     #query(word)
     #word = extract_word_file(word)
-    print query(word)
+    w = query(word)
+    print w
+
+    print [str(ww) for ww in w.words]
+    for m in w.meanings:
+        print m
+        for s in m.sentences:
+            print s
+
 
