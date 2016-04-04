@@ -217,15 +217,16 @@ def query_statistics():
 
     if query_statistics_count > 10:
         import sys
-        sys.exit()
+        #sys.exit()
 
 def query_dict():
     state_file = data_filepath('state', 'last_query_state')
     states = pplib.ff.read_states(state_file)
+    error_words = open(data_filepath('state', 'query_error_words'), 'a')
 
+    class local:
+        start = False
     def filter_func(c):
-        class local:
-            start = False
 
         # not ever parsed
         if not states:
@@ -249,9 +250,11 @@ def query_dict():
                 word: Word
             """
             if word:
-                print word
+                f = processed_cateogory_filepath(w, 'jisho')
+                pplib.ff.save(f, str(word))
             else:
                 print '%s not found' % w
+                print >> error_words, w
 
             pplib.ff.save_states(state_file, [c['url'], w])
             query_statistics()
@@ -297,5 +300,5 @@ if __name__ == '__main__':
     #parse_categories()
     #process_categories()
     #extract_words()
-    query_dict()
+    pplib.task.schedule(query_dict)
 
