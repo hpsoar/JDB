@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-
-def format_object(o):
-    import json
-    return json.dumps(o, indent=4)
+import pplib
+import copy
 
 class Word(object):
     def __init__(self, text='', furigana=None):
@@ -14,7 +12,7 @@ class Word(object):
 
 
     def __unicode__(self):
-        return format_object(self.dump_object())
+        return pplib.ff.format_object(self.dump_object())
 
 
     def __str__(self):
@@ -24,7 +22,7 @@ class Word(object):
     def dump_object(self):
         '''
         '''
-        o = self.__dict__.copy()
+        o = copy.deepcopy(self.__dict__)
         o['words'] = Kanji.dump_objects(self.words)
         o['meanings'] = [m.dump_object() for m in self.meanings]
         return o
@@ -51,7 +49,7 @@ class Kanji(object):
 
 
     def dump_object(self):
-        return self.__dict__.copy()
+        return copy.deepcopy(self.__dict__)
 
 
     @staticmethod
@@ -100,7 +98,7 @@ class WordMeaning(object):
 
 
     def dump_object(self):
-        o = self.__dict__.copy()
+        o = copy.deepcopy(self.__dict__)
         o['sentences'] = [s.dump_object() for s in self.sentences]
         return o
 
@@ -137,7 +135,7 @@ class Sentence(object):
 
 
     def dump_object(self):
-        o = self.__dict__.copy()
+        o = copy.deepcopy(self.__dict__)
         o['words'] = Kanji.dump_objects(self.words)
         return o
 

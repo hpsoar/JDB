@@ -153,7 +153,6 @@ class Manager(object):
                 print 'error'
                 print k
 
-
     
     def convert_xml_to_json(self, eles):
         print 'convert to json...'
@@ -164,7 +163,6 @@ class Manager(object):
 
         print kanjis[0]
         print kanjis[1]
-
 
 
 if __name__ == '__main__':
