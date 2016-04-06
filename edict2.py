@@ -100,7 +100,6 @@ class Word(object):
         self.text, self.tags = parse_tags(self.text)
 
     def parse_text_kanas(self, content):
-        print content
         parts = content.split('[')
         if len(parts) == 1:
             parts = content.split(';')
@@ -109,7 +108,6 @@ class Word(object):
 
         if len(parts) > 1:
             kanas = parts[1].replace(']', '').split(';')
-            print kanas
             self.kanas = [Kana(k) for k in kanas]
 
 
@@ -143,7 +141,6 @@ class Edict2(object):
             comps = line.split('/')
             comps = [c for c in comps if c.strip()]
 
-            print line
             w = Word()
             w.seq_num = comps[-1]
             w.parse_text_kanas(comps[0])
