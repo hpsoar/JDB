@@ -2,6 +2,9 @@
 import pplib
 import copy
 
+markings = [ '(X)', '(abbr)', '(arch)', '(ateji)', '(chn)', '(col)', '(derog)', '(eK)', '(ek)', '(fam)', '(fem)', '(gikun)', '(hon)', '(hum)', '(ik)', '(iK)', '(id)', '(io)', '(m-sl)', '(male)', '(male-sl)', '(oK)', '(obs)', '(obsc)', '(ok)', '(on-mim)', '(poet)', '(pol)', '(rare)', '(sens)', '(sl)', '(uK)', '(uk)', '(vulg)' ]
+
+
 def parse_tags(text):
     parts = text.split('(')
     text = parts[0]
@@ -10,16 +13,7 @@ def parse_tags(text):
     return text, tags
 
 
-class Kana(object):
-    def __init__(self, kana):
-        self.kana = kana
-        self.parse_tags()
-
-
-    def parse_tags(self):
-        self.kana, self.tags = parse_tags(self.kana)
-
-
+class Base(object):
     def __str__(self):
         return unicode(self).encode('utf-8')
 
@@ -32,13 +26,93 @@ class Kana(object):
         return copy.deepcopy(self.__dict__)
 
 
-class Meaning(object):
-    def __init__(self, meaning, pos=''):
-        self.meaning = meaning
-        self.pos = pos
+class Kana(Base):
+    def __init__(self, kana):
+        self.kana = kana
+        self.parse_tags()
 
 
-class Word(object):
+    def parse_tags(self):
+        self.kana, self.tags = parse_tags(self.kana)
+
+
+class Meaning(Base):
+    @staticmethod
+    def parse(raw_meanings):
+
+        if not raw_meanings: return list()
+    
+        m = None
+        result = list()
+        num = 1
+        num_str = '(1)'
+        for c in raw_meanings:
+            if not m or num_str in c:
+                m = Meaning.parse_one_meaning(c, num_str)
+                result.append(m)
+
+                num += 1
+                num_str = '(%d)' % num
+            else:
+                m.glosses.append(c)
+        return result
+
+
+    @staticmethod
+    def parse_one_meaning(comp, num = None):
+        # (poses) (1) (uk) {food} (pun on ...) (See ...)
+        import re
+        reg_mark = re.compile('^\((\S*)\)')
+        m = reg_mark.search(comp)
+        if not m:
+            print '-'*80
+            print 'error'
+            return None
+
+        poses = m.group(1).split(',')
+        
+        # strip poses
+        comp = comp.replace(m.group(0), '').strip()
+        
+        # strip (1)
+        if comp.startswith(num):
+            comp = comp.replace(num, '').strip()
+
+        # strip (ui), etc.
+        tags = list()
+        for m in markings:
+            if m in comp:
+                comp = comp.replace(m, '')
+                tags.append(m.replace('(', '').replace(')', ''))
+        comp = comp.strip()
+
+        # strip {food}
+        reg_foa = re.compile('^\{(\S*)\}')
+        m = reg_foa.search(comp)
+        foas = list()
+        if m:
+            foas = m.group(1).split(',')
+            comp = comp.replace(m.group(0), '').strip()
+
+        gloss = comp
+
+        meaning = Meaning()
+        meaning.poses = poses
+        meaning.glosses.append(gloss)
+        meaning.tags = tags
+        meaning.foas = foas
+
+        return meaning
+
+
+    def __init__(self):
+        self.poses = list()  # [part of speech]
+        self.glosses = list() # [gloss]
+        self.tags = list() # [marking
+        self.foas = list() # [field of application]
+
+
+class Word(Base):
     def __init__(self):
         self.text = ''
         self.kanas = list()
@@ -47,17 +121,10 @@ class Word(object):
         self.tags = list()
 
 
-    def __str__(self):
-        return unicode(self).encode('utf-8')
-
-
-    def __unicode__(self):
-        return pplib.ff.format_object(self.dump_object())
-
-
     def dump_object(self):
         o = copy.deepcopy(self.__dict__)
         o['kanas'] = [k.dump_object() for k in self.kanas]
+        o['meanings'] = [m.dump_object() for m in self.meanings]
         return o
 
 
@@ -113,19 +180,7 @@ class Word(object):
 
     def parse_meanings(self, comps):
         if comps:
-            #first = comps[0]
-            #parts = first.split(' ')
-            #tags = list()
-            #for i in range(len(parts)):
-            #    p = parts[i].strip()
-            #    if p.startswith('('):
-            #        tags.append(p)
-            #    else:
-            #        first = ' '.join(parts[i:])
-            #        break
-            #comps[0] = first
-            self.meanings = comps
-            #self.tags = tags
+            self.meanings = Meaning.parse(comps)
 
 
 class Edict2(object):
@@ -144,12 +199,16 @@ class Edict2(object):
             w = Word()
             w.seq_num = comps[-1]
             w.parse_text_kanas(comps[0])
-            w.parse_meanings(comps[1: -2])
+            w.parse_meanings(comps[1: -1])
+            #print comps
+            #print comps[1:-1]
 
             ws = w.split_words() # 有的多个词在同一行
 
             for w in ws:
                 print w
+
+            #if count > 20: break
 
 
 if __name__ == '__main__':
