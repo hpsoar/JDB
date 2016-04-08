@@ -204,7 +204,54 @@ def parse_raw_file(word):
     content = pplib.ff.read(path)
     extract_concept(content)
 
-if __name__ == '__main__':
+
+def query_words(words, callback=None):
+    error_words_path = data_path('state', 'query_error_words')
+    f_error_words = pplib.ff.openfile(error_words_path, 'a')
+    error_words_map = load_fail_word_map(error_words_path)
+
+    for w in words:
+        print 'query: %s' % w
+        if w in error_words_map:
+            print 'word `%s` was failed' % w
+            if callback: callback(w, None)
+            continue
+
+        f = data_path('dict_json', w)
+        word = load_word(f)
+        if word:
+            print 'load: %s' % w
+        else:
+            word = query(w)
+            if word:
+                print 'query success: %s' % w
+            else:
+                print 'query failed: %s' % w
+                print >> f_error_words, w
+
+        if word:
+            print 'save to: %s' % f
+            pplib.ff.save(f, str(word))
+
+        if callback: callback(w, word)
+
+def load_fail_word_map(f):
+    r = dict()
+    for l in pplib.ff.read_lines(f):
+        r[l] = True
+    return r
+
+
+def load_word(f):
+    j = pplib.ff.read_json(f)
+    if j:
+        w = Word()
+        w.load_object(j)
+        return w
+    return None
+
+
+def test():
     word = '長い'
     #word = '発明'
     #word = '数ヵ月'
@@ -221,4 +268,10 @@ if __name__ == '__main__':
         for s in m.sentences:
             print s
 
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1:
+        load_word(sys.argv[1])
+    else:
+        test()
 

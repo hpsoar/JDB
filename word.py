@@ -28,10 +28,11 @@ class Word(object):
         return o
 
 
-    def load_json(self, json):
+    def load_object(self, json):
         self.__dict__.update(json)
         self.words = Kanji.load_objects(json['words'])
         self.meanings = WordMeaning.load_objects(json['meanings'])
+        return self
 
 
 class Kanji(object):
@@ -106,18 +107,13 @@ class WordMeaning(object):
     def load_object(self, json):
         self.__dict__.update(json)
         self.sentences = Sentence.load_objects(json['sentences'])
-
-
-    @staticmethod
-    def load_object(json):
-        m = WordMeaning()
-        m.load_object(json)
+        return self
 
 
     @staticmethod
     def load_objects(jarray):
         if not jarray: return list()
-        return [WordMeaning.load_object(j) for j in jarray]
+        return [WordMeaning().load_object(j) for j in jarray]
 
 
 class Sentence(object):
@@ -143,17 +139,12 @@ class Sentence(object):
     def load_object(self, json):
         self.__dict__.update(json)
         self.words = Kanji.load_objects(json['words'])
-
-
-    @staticmethod
-    def load_object(json):
-        s = Sentence()
-        s.load_object(json)
+        return self
 
 
     @staticmethod
     def load_objects(jarray):
         if not jarray: return list()
-        return [Sentence.load_object(j) for j in jarray]
+        return [Sentence().load_object(j) for j in jarray]
 
 

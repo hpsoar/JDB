@@ -222,10 +222,10 @@ def query_statistics():
 def query_dict():
     state_file = data_filepath('state', 'last_query_state')
     states = pplib.ff.read_states(state_file)
-    error_words = open(data_filepath('state', 'query_error_words'), 'a')
 
     class local:
         start = False
+
     def filter_func(c):
 
         # not ever parsed
@@ -249,17 +249,10 @@ def query_dict():
                 w: word text
                 word: Word
             """
-            if word:
-                f = processed_cateogory_filepath(w, 'jisho')
-                pplib.ff.save(f, str(word))
-            else:
-                print '%s not found' % w
-                print >> error_words, w
-
             pplib.ff.save_states(state_file, [c['url'], w])
             query_statistics()
 
-        query_words(words, word_callback)
+        jisho_dict.query_words(words, word_callback)
 
     enum_categories_with(parse_words_for_category, filter_func, callback)
 
