@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pplib
+from pplib.base_model import BaseM
 import copy
 
 markings = [ '(X)', '(abbr)', '(arch)', '(ateji)', '(chn)', '(col)', '(derog)', '(eK)', '(ek)', '(fam)', '(fem)', '(gikun)', '(hon)', '(hum)', '(ik)', '(iK)', '(id)', '(io)', '(m-sl)', '(male)', '(male-sl)', '(oK)', '(obs)', '(obsc)', '(ok)', '(on-mim)', '(poet)', '(pol)', '(rare)', '(sens)', '(sl)', '(uK)', '(uk)', '(vulg)' ]
@@ -13,20 +14,7 @@ def parse_tags(text):
     return text, tags
 
 
-class Base(object):
-    def __str__(self):
-        return unicode(self).encode('utf-8')
-
-
-    def __unicode__(self):
-        return pplib.ff.format_object(self.dump_object())
-
-
-    def dump_object(self):
-        return copy.deepcopy(self.__dict__)
-
-
-class Kana(Base):
+class Kana(BaseM):
     def __init__(self, kana):
         self.kana = kana
         self.parse_tags()
@@ -36,7 +24,7 @@ class Kana(Base):
         self.kana, self.tags = parse_tags(self.kana)
 
 
-class Meaning(Base):
+class Meaning(BaseM):
     @staticmethod
     def parse(raw_meanings):
 
@@ -112,7 +100,7 @@ class Meaning(Base):
         self.foas = list() # [field of application]
 
 
-class Word(Base):
+class Word(BaseM):
     def __init__(self):
         self.text = ''
         self.kanas = list()
