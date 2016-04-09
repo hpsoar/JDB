@@ -8,6 +8,11 @@ def data_path(path, filename):
     import os
     path = os.path.join('jisho', path)
     return pplib.ff.data_path(path, filename)
+
+
+def dir_path(path):
+    return pplib.ff.data_path('jisho', path)
+
     
 def parse_audios(bs):
     srcs = list()
@@ -187,8 +192,8 @@ def extract_word_kanjis(furigana, text):
     words = list()
     if len(kanjis) != len(furiganas):
         print 'error parsing word: %s%s' % (''.join(kanjis), ss)
-        print kanjis
-        print furiganas
+        print ','.join(kanjis)
+        print ','.join(furiganas)
     else:
         for i in range(len(kanjis)):
             k = Kanji(kanjis[i], furiganas[i])
@@ -205,20 +210,21 @@ def parse_raw_file(word):
     extract_concept(content)
 
 
-def query_words(words, callback=None):
+def query_words(words, callback=None, wait=0, ignore_failed=True):
     error_words_path = data_path('state', 'query_error_words')
     f_error_words = pplib.ff.openfile(error_words_path, 'a')
     error_words_map = load_fail_word_map(error_words_path)
 
     for w in words:
         print 'query: %s' % w
-        if w in error_words_map:
-            print 'word `%s` was failed' % w
-            if callback: callback(w, None)
-            continue
+        if ignore_failed:
+            if w in error_words_map:
+                print 'word `%s` was failed' % w
+                if callback: callback(w, None)
+                continue
 
         f = data_path('dict_json', w)
-        word = load_word(f)
+        word = load_word_path(f)
         if word:
             print 'load: %s' % w
         else:
@@ -227,13 +233,19 @@ def query_words(words, callback=None):
                 print 'query success: %s' % w
             else:
                 print 'query failed: %s' % w
-                print >> f_error_words, w
+                if not ignore_failed and w not in error_words_map:
+                    print >> f_error_words, w
 
-        if word:
-            print 'save to: %s' % f
-            pplib.ff.save(f, str(word))
+            if word:
+                print 'save to: %s' % f
+                pplib.ff.save(f, str(word))
 
         if callback: callback(w, word)
+
+        if wait:
+            import time
+            time.sleep(wait)
+
 
 def load_fail_word_map(f):
     r = dict()
@@ -242,13 +254,56 @@ def load_fail_word_map(f):
     return r
 
 
-def load_word(f):
+def load_word(w):
+    f = data_path('dict_json', w)
+    return load_word_path(f)
+
+
+def load_word_path(f):
     j = pplib.ff.read_json(f)
     if j:
         w = Word()
         w.load_object(j)
         return w
     return None
+
+
+def download_audios():
+    path = dir_path('dict_json')
+    filenames = pplib.ff.filenames_inpath(path)
+    print 'download audios in path: %s, %d files' % (path, len(filenames))
+    count = 0
+    for f in filenames:
+        w = load_word_path(f)
+        if w:
+            for a in w.audios:
+                count += 1
+                print count
+                try:
+                    download_audio(a)
+                except Exception, ex:
+                    print ex
+                    print 'failed to download: %s' % a
+        else:
+            print 'failed to load word: %s' % f
+
+
+def download_audio(url):
+    import os
+    filename = os.path.basename(url)
+    path = data_path('dict_audio', filename)
+    if os.path.exists(path):
+        print 'already download: %s' % url
+        return
+
+    print 'download: %s' % url
+    c, data = pplib.uff.download(url, timeout=60)
+
+    if data:
+        print 'save to: %s' % path
+        pplib.ff.save(path, data, mode='wb')
+    else:
+        print 'failed to download: %s, %d' % (url, c)
 
 
 def test():
@@ -270,8 +325,15 @@ def test():
 
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) > 1:
-        load_word(sys.argv[1])
+    print sys.argv
+    opt = sys.argv[1] if len(sys.argv) > 1 else None
+    if len(sys.argv) > 2:
+        if opt == 'l':
+            print query(sys.argv[2])
+        elif opt == 'c':
+            load_word(sys.argv[2])
     else:
-        test()
+        if opt == 'da':
+            download_audios()
+
 
