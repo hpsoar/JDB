@@ -130,6 +130,7 @@ def split_link(src_lang, dest_lang):
             return
         ff.write(line)
 
+    print 'split links.csv'
     all_links = pplib.ff.data_path('tatoeba', 'links.csv')
     pplib.ff.enum_lines2(all_links, parser)
 
@@ -139,11 +140,16 @@ def merge_sentences(src_lang, dest_lang):
 
     f = open(merged_setence_path(src_lang, dest_lang), 'w')
 
+    mark = set()
+
     def parser(line, parts):
         src, _ = parts
-        s = SentenceParser.sentence(src)
-        f.write(s)
+        if src not in mark:
+            s = SentenceParser.sentence(src)
+            f.write(s)
+            mark.add(src)
 
+    print 'filter & merge src & dest sentences'
     pplib.ff.enum_lines2(link_path(src_lang, dest_lang), parser)
 
 
@@ -162,16 +168,24 @@ def import_data(src_lang, dest_lang):
 
     print 'save sentences'
     for s in SentenceParser.sentences:
-        s.save()
+        try:
+            s.save(force_insert=True)
+        except Exception, ex:
+            print s
+            print ex
 
     print 'save links'
     for l in LinkParser.links:
-        l.save()
+        try:
+            l.save(force_insert=True)
+        except Exception, ex:
+            print l
+            print ex
 
 
 if __name__ == '__main__':
     import sys
-    pplib.ff.data_root = '../../data'
+    pplib.ff.data_root = '../data'
 
     opt = 'i'
     src_lang = 'jpn'

@@ -5,7 +5,7 @@ from playhouse.sqlite_ext import SqliteExtDatabase
 import datetime
 from pplib.base_model import BaseM
 
-db = SqliteExtDatabase('../../data/tatoeba/tatoeba.db')
+db = SqliteExtDatabase('../data/tatoeba/tatoeba.db')
 
 
 time_format = '%Y-%m-%d %H:%M:%S'
@@ -22,14 +22,14 @@ class User(BaseModel):
 
 class Sentence(BaseModel):
 
-    user = CharField()  # username
+    user = CharField(null=True)  # username
 
     num = IntegerField(primary_key=True)
     lang = FixedCharField(8)
     text = CharField()
 
-    create_time = DateTimeField(default=datetime.datetime.now)
-    modify_time = DateTimeField(default=datetime.datetime.now)
+    create_time = DateTimeField(default=datetime.datetime.now, null=True)
+    modify_time = DateTimeField(default=datetime.datetime.now, null=True)
 
     def dump_object(self):
         o = dict()
